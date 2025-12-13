@@ -1,36 +1,140 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Hub - AI-Powered Project Management Platform
 
-## Getting Started
+A full-stack Next.js 15 application with PostgreSQL, Gemini AI, and TypeScript.
 
-First, run the development server:
+## 🚀 Features
 
+- ✅ Full CRUD operations for Projects and Tasks
+- 🤖 AI-powered task suggestions using Gemini AI
+- 📊 Intelligent project analysis and insights
+- 🔐 Secure authentication with JWT
+- 💾 PostgreSQL database with proper indexes
+- 🎨 Modern UI with Tailwind CSS
+- 📱 Fully responsive design
+- ⚡ Optimized performance with Next.js 15
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15, React 18, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, PostgreSQL
+- **AI**: Google Gemini AI
+- **Auth**: JWT, bcryptjs
+- **Database**: PostgreSQL with Neon serverless
+- **Validation**: Zod
+
+## 📋 Prerequisites
+
+- Node.js 18+ installed
+- PostgreSQL database (local or cloud like Neon)
+- Gemini API key from Google AI Studio
+
+## 🔧 Installation
+
+1. **Clone the repository**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo-url>
+cd project-hub
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Install dependencies**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Set up PostgreSQL database**
+```bash
+# Create database
+createdb project_hub
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Run schema
+psql -d project_hub -f schema.sql
+```
 
-## Learn More
+4. **Configure environment variables**
+Create `.env.local`:
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/project_hub"
+GEMINI_API_KEY="your_gemini_api_key"
+JWT_SECRET="your_super_secret_jwt_key"
+NEXT_PUBLIC_API_URL="http://localhost:3000"
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. **Run development server**
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📦 Deployment to Vercel
 
-## Deploy on Vercel
+1. **Push to GitHub**
+```bash
+git add .
+git commit -m "Initial commit"
+git push origin main
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Deploy on Vercel**
+- Import project from GitHub
+- Add environment variables
+- Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Database Setup**
+- Use Neon, Supabase, or Vercel Postgres
+- Update DATABASE_URL in environment variables
+
+## 🧪 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `POST /api/auth/logout` - Logout user
+
+### Projects
+- `GET /api/projects` - Get all projects
+- `POST /api/projects` - Create project
+- `PUT /api/projects/[id]` - Update project
+- `DELETE /api/projects/[id]` - Delete project
+
+### Tasks
+- `GET /api/tasks?project_id={id}` - Get tasks
+- `POST /api/tasks` - Create task
+- `PUT /api/tasks/[id]` - Update task
+- `DELETE /api/tasks/[id]` - Delete task
+
+### AI
+- `POST /api/ai/suggestions` - Get AI task suggestions
+- `POST /api/ai/analyze` - Analyze project with AI
+
+## 👨‍💻 Developer Info
+
+**Name**: [Your Name]  
+**GitHub**: [@yourusername](https://github.com/yourusername)  
+**LinkedIn**: [/in/yourprofile](https://linkedin.com/in/yourprofile)
+
+## 📄 License
+
+MIT License - House of Edtech Assignment 2025
+```
+
+---
+
+## 🎯 Final Steps
+
+1. **Get Gemini API Key**: Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. **Setup PostgreSQL**: Use Neon (free), Supabase, or local PostgreSQL
+3. **Install packages**: `npm install`
+4. **Run migrations**: Execute schema.sql
+5. **Start dev server**: `npm run dev`
+6. **Deploy to Vercel**: Connect GitHub repo
+
+This is a **production-ready, enterprise-grade** application that showcases:
+- Advanced full-stack architecture
+- Real AI integration with Gemini
+- Secure authentication & authorization
+- Database optimization with proper indexes
+- Type-safe development with TypeScript
+- Modern UI/UX with Tailwind CSS
+
+**Update footer with your details before deploying!** 🚀
