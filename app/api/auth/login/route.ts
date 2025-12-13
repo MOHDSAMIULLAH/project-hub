@@ -46,12 +46,11 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      name: user.name,
     });
 
-    // Set cookie
-    await setAuthCookie(token);
-
-    return NextResponse.json({
+    // Create response
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -60,6 +59,18 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
     });
+
+    // Set cookie directly on response
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    console.log('Login successful, cookie set');
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

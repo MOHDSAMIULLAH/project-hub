@@ -38,8 +38,9 @@ export default function RegisterForm() {
           password: formData.password,
         }),
       });
-
+    console.log('Response:', response);
       const data = await response.json();
+      console.log('Data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');

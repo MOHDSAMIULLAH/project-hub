@@ -8,6 +8,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
+  name?: string;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -27,8 +28,16 @@ export function generateToken(payload: JWTPayload): string {
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET is not defined!');
+      return null;
+    }
+    console.log('Verifying token with secret length:', JWT_SECRET.length);
+    const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    console.log('Token verified successfully for user:', payload.userId);
+    return payload;
   } catch (error) {
+    console.error('Token verification failed:', error instanceof Error ? error.message : error);
     return null;
   }
 }
@@ -42,6 +51,8 @@ export async function setAuthCookie(token: string) {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
   });
+  
+  console.log('Cookie set for token');
 }
 
 export async function removeAuthCookie() {

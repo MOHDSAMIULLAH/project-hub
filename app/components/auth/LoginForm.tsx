@@ -19,23 +19,30 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
+      console.log('Attempting login...');
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        credentials: 'include', // Ensure cookies are included
       });
 
       const data = await response.json();
+      console.log('Login response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
       }
 
-      router.push('/');
-      router.refresh();
+      console.log('Login successful, redirecting to dashboard...');
+      // Wait a moment for cookie to be saved, then redirect
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 100);
     } catch (err) {
+      console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);

@@ -1,14 +1,6 @@
 import Link from 'next/link';
-import { getAuthUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
 
-export default async function Home() {
-  const user = await getAuthUser();
-  
-  if (user) {
-    redirect('/dashboard');
-  }
-
+export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="max-w-7xl mx-auto px-4 py-16">
