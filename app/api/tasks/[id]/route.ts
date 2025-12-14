@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { query } from '@/lib/db';
+import { db } from '@/lib/db';
+import { tasks } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
 
 const taskUpdateSchema = z.object({
@@ -27,46 +29,31 @@ export async function PUT(
     const validatedData = taskUpdateSchema.parse(body);
 
     // Check ownership
-    const existing = await query(
-      'SELECT created_by FROM tasks WHERE id = $1',
-      [id]
-    );
+    const existing = await db.select().from(tasks).where(eq(tasks.id, id));
 
-    if (existing.rows.length === 0) {
+    if (existing.length === 0) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    if (existing.rows[0].created_by !== user.userId) {
+    if (existing[0].createdBy !== user.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramCount = 1;
-
-    Object.entries(validatedData).forEach(([key, value]) => {
-      if (value !== undefined) {
-        updates.push(`${key} = $${paramCount}`);
-        values.push(value);
-        paramCount++;
-      }
-    });
-
-    if (updates.length === 0) {
-      return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
+    const updateData: any = { updatedAt: new Date() };
+    if (validatedData.title !== undefined) updateData.title = validatedData.title;
+    if (validatedData.description !== undefined) updateData.description = validatedData.description;
+    if (validatedData.status !== undefined) updateData.status = validatedData.status;
+    if (validatedData.priority !== undefined) updateData.priority = validatedData.priority;
+    if (validatedData.estimated_hours !== undefined) {
+      updateData.estimatedHours = validatedData.estimated_hours?.toString();
     }
 
-    values.push(id);
+    const result = await db.update(tasks)
+      .set(updateData)
+      .where(eq(tasks.id, id))
+      .returning();
 
-    const result = await query(
-      `UPDATE tasks 
-       SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $${paramCount}
-       RETURNING *`,
-      values
-    );
-
-    return NextResponse.json({ task: result.rows[0] });
+    return NextResponse.json({ task: result[0] });
   } catch (error) {
     console.error('Update task error:', error);
     return NextResponse.json(
@@ -88,20 +75,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const existing = await query(
-      'SELECT created_by FROM tasks WHERE id = $1',
-      [id]
-    );
+    const existing = await db.select().from(tasks).where(eq(tasks.id, id));
 
-    if (existing.rows.length === 0) {
+    if (existing.length === 0) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    if (existing.rows[0].created_by !== user.userId) {
+    if (existing[0].createdBy !== user.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await query('DELETE FROM tasks WHERE id = $1', [id]);
+    await db.delete(tasks).where(eq(tasks.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

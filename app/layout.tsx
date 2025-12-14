@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Project Hub - AI-Powered Project Management',
+  title: 'Project Management - AI-Powered Project Management',
   description: 'Manage your projects efficiently with AI-powered insights',
 };
 

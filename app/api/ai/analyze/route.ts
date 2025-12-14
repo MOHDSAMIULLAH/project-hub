@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/auth';
 import { analyzeProject } from '@/lib/gemini';
-import { query } from '@/lib/db';
+import { db } from '@/lib/db';
+import { projects, tasks } from '@/lib/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 const analyzeSchema = z.object({
   project_id: z.string().uuid(),
@@ -20,12 +22,12 @@ export async function POST(request: NextRequest) {
     const { project_id } = analyzeSchema.parse(body);
 
     // Get project details
-    const projectResult = await query(
-      'SELECT title FROM projects WHERE id = $1 AND created_by = $2',
-      [project_id, user.userId]
-    );
+    const projectResult = await db
+      .select({ title: projects.title })
+      .from(projects)
+      .where(and(eq(projects.id, project_id), eq(projects.createdBy, user.userId)));
 
-    if (projectResult.rows.length === 0) {
+    if (projectResult.length === 0) {
       return NextResponse.json(
         { error: 'Project not found' },
         { status: 404 }
@@ -33,16 +35,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all tasks for the project
-    const tasksResult = await query(
-      'SELECT * FROM tasks WHERE project_id = $1 ORDER BY created_at DESC',
-      [project_id]
-    );
+    const tasksResult = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.projectId, project_id))
+      .orderBy(desc(tasks.createdAt));
 
-    const project = projectResult.rows[0];
-    const tasks = tasksResult.rows;
+    const project = projectResult[0];
+    const tasksList = tasksResult;
 
     // Analyze with AI
-    const analysis = await analyzeProject(project.title, tasks);
+    const analysis = await analyzeProject(project.title, tasksList as any);
 
     return NextResponse.json({ analysis });
   } catch (error) {

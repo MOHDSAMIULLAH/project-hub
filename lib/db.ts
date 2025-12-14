@@ -1,22 +1,21 @@
-import { Pool } from '@neondatabase/serverless';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import * as schema from './schema';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not defined');
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const sql = neon(process.env.DATABASE_URL);
+export const db = drizzle(sql, { schema });
 
+// Legacy query function for backward compatibility (if needed)
 export const query = async (text: string, params?: any[]) => {
-  const start = Date.now();
-  try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: res.rowCount });
-    return res;
-  } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
-  }
+  const result = await sql(text, params);
+  return {
+    rows: result,
+    rowCount: result.length,
+  };
 };
 
-export default pool;
+export default db;

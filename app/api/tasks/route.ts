@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { query } from '@/lib/db';
+import { db } from '@/lib/db';
+import { tasks, users, projects } from '@/lib/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
 
 const taskSchema = z.object({
@@ -23,24 +25,32 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('project_id');
 
-    let queryText = `
-      SELECT t.*, u.name as creator_name 
-      FROM tasks t 
-      JOIN users u ON t.created_by = u.id 
-      WHERE t.created_by = $1
-    `;
-    const params: any[] = [user.userId];
+    let query = db
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        status: tasks.status,
+        priority: tasks.priority,
+        estimated_hours: tasks.estimatedHours,
+        project_id: tasks.projectId,
+        created_by: tasks.createdBy,
+        created_at: tasks.createdAt,
+        updated_at: tasks.updatedAt,
+        creator_name: users.name,
+      })
+      .from(tasks)
+      .innerJoin(users, eq(tasks.createdBy, users.id));
 
     if (projectId) {
-      queryText += ' AND t.project_id = $2';
-      params.push(projectId);
+      query = query.where(and(eq(tasks.createdBy, user.userId), eq(tasks.projectId, projectId)));
+    } else {
+      query = query.where(eq(tasks.createdBy, user.userId));
     }
 
-    queryText += ' ORDER BY t.created_at DESC';
+    const result = await query.orderBy(desc(tasks.createdAt));
 
-    const result = await query(queryText, params);
-
-    return NextResponse.json({ tasks: result.rows });
+    return NextResponse.json({ tasks: result });
   } catch (error) {
     console.error('Get tasks error:', error);
     return NextResponse.json(
@@ -62,34 +72,29 @@ export async function POST(request: NextRequest) {
     const validatedData = taskSchema.parse(body);
 
     // Verify project ownership
-    const projectCheck = await query(
-      'SELECT id FROM projects WHERE id = $1 AND created_by = $2',
-      [validatedData.project_id, user.userId]
-    );
+    const projectCheck = await db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.id, validatedData.project_id), eq(projects.createdBy, user.userId)));
 
-    if (projectCheck.rows.length === 0) {
+    if (projectCheck.length === 0) {
       return NextResponse.json(
         { error: 'Project not found or unauthorized' },
         { status: 403 }
       );
     }
 
-    const result = await query(
-      `INSERT INTO tasks (title, description, status, priority, estimated_hours, project_id, created_by) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING *`,
-      [
-        validatedData.title,
-        validatedData.description || null,
-        validatedData.status,
-        validatedData.priority,
-        validatedData.estimated_hours || null,
-        validatedData.project_id,
-        user.userId,
-      ]
-    );
+    const result = await db.insert(tasks).values({
+      title: validatedData.title,
+      description: validatedData.description,
+      status: validatedData.status,
+      priority: validatedData.priority,
+      estimatedHours: validatedData.estimated_hours?.toString(),
+      projectId: validatedData.project_id,
+      createdBy: user.userId,
+    }).returning();
 
-    return NextResponse.json({ task: result.rows[0] }, { status: 201 });
+    return NextResponse.json({ task: result[0] }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

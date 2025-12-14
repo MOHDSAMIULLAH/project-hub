@@ -11,26 +11,28 @@ export async function generateTaskSuggestions(
   projectDescription: string
 ): Promise<any[]> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    console.log('Generating task suggestions...', projectTitle, projectDescription);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `You are a project management expert. Given a project titled "${projectTitle}" with description: "${projectDescription}", 
     generate 5-7 relevant tasks that would help complete this project successfully.
     
     For each task, provide:
-    - title: A clear, actionable task title
+    - title: A clear, actionable task title (concise, under 100 characters)
+    - description: A detailed description explaining what needs to be done, why it's important, and any relevant details (2-3 sentences)
     - priority: high, medium, or low
     - estimatedHours: Estimated hours to complete (as a number)
     
     Return ONLY a valid JSON array with no markdown formatting or additional text. Example format:
     [
-      {"title": "Task name", "priority": "high", "estimatedHours": 8},
-      {"title": "Another task", "priority": "medium", "estimatedHours": 4}
+      {"title": "Task name", "description": "Detailed description of what needs to be done and why", "priority": "high", "estimatedHours": 8},
+      {"title": "Another task", "description": "Another detailed description with context", "priority": "medium", "estimatedHours": 4}
     ]`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    
+    console.log('Raw AI response:', text);
     // Clean and parse the response
     const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
     const suggestions = JSON.parse(cleanedText);
@@ -51,7 +53,7 @@ export async function analyzeProject(
   recommendations: string[];
 }> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const tasksInfo = tasks.map(t => ({
       title: t.title,

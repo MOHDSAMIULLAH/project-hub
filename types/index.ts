@@ -31,6 +31,7 @@ export interface Task {
 
 export interface AITaskSuggestion {
   title: string;
+  description?: string;
   priority: 'low' | 'medium' | 'high';
   estimatedHours: number;
 }

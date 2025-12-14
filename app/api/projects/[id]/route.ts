@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { query } from '@/lib/db';
+import { db } from '@/lib/db';
+import { projects } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
 
 const projectSchema = z.object({
@@ -24,30 +26,26 @@ export async function PUT(
     const validatedData = projectSchema.parse(body);
 
     // Check ownership
-    const existing = await query(
-      'SELECT created_by FROM projects WHERE id = $1',
-      [id]
-    );
+    const existing = await db.select().from(projects).where(eq(projects.id, id));
 
-    if (existing.rows.length === 0) {
+    if (existing.length === 0) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (existing.rows[0].created_by !== user.userId) {
+    if (existing[0].createdBy !== user.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const result = await query(
-      `UPDATE projects 
-       SET title = COALESCE($1, title), 
-           description = COALESCE($2, description),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3 
-       RETURNING *`,
-      [validatedData.title, validatedData.description, id]
-    );
+    const updateData: any = { updatedAt: new Date() };
+    if (validatedData.title !== undefined) updateData.title = validatedData.title;
+    if (validatedData.description !== undefined) updateData.description = validatedData.description;
 
-    return NextResponse.json({ project: result.rows[0] });
+    const result = await db.update(projects)
+      .set(updateData)
+      .where(eq(projects.id, id))
+      .returning();
+
+    return NextResponse.json({ project: result[0] });
   } catch (error) {
     console.error('Update project error:', error);
     return NextResponse.json(
@@ -70,20 +68,17 @@ export async function DELETE(
     }
 
     // Check ownership
-    const existing = await query(
-      'SELECT created_by FROM projects WHERE id = $1',
-      [id]
-    );
+    const existing = await db.select().from(projects).where(eq(projects.id, id));
 
-    if (existing.rows.length === 0) {
+    if (existing.length === 0) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (existing.rows[0].created_by !== user.userId) {
+    if (existing[0].createdBy !== user.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await query('DELETE FROM projects WHERE id = $1', [id]);
+    await db.delete(projects).where(eq(projects.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

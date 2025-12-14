@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { query } from '@/lib/db';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { hashPassword, generateToken, setAuthCookie } from '@/lib/auth';
 
 const registerSchema = z.object({
@@ -15,12 +17,9 @@ export async function POST(request: NextRequest) {
     const validatedData = registerSchema.parse(body);
 
     // Check if user exists
-    const existingUser = await query(
-      'SELECT id FROM users WHERE email = $1',
-      [validatedData.email]
-    );
+    const existingUser = await db.select().from(users).where(eq(users.email, validatedData.email));
 
-    if (existingUser.rows.length > 0) {
+    if (existingUser.length > 0) {
       return NextResponse.json(
         { error: 'Email already exists' },
         { status: 400 }
@@ -31,20 +30,20 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(validatedData.password);
 
     // Create user
-    const result = await query(
-      `INSERT INTO users (name, email, password_hash, role) 
-       VALUES ($1, $2, $3, $4) 
-       RETURNING id, name, email, role, created_at`,
-      [validatedData.name, validatedData.email, passwordHash, 'member']
-    );
+    const result = await db.insert(users).values({
+      name: validatedData.name,
+      email: validatedData.email,
+      passwordHash: passwordHash,
+      role: 'member',
+    }).returning();
 
-    const user = result.rows[0];
+    const user = result[0];
 
     // Generate token
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role || 'member',
       name: user.name,
     });
 
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.role || 'member',
       },
     });
   } catch (error) {

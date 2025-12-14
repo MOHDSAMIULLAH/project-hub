@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { query } from '@/lib/db';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { verifyPassword, generateToken, setAuthCookie } from '@/lib/auth';
 
 const loginSchema = z.object({
@@ -14,24 +16,21 @@ export async function POST(request: NextRequest) {
     const validatedData = loginSchema.parse(body);
 
     // Find user
-    const result = await query(
-      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1',
-      [validatedData.email]
-    );
+    const result = await db.select().from(users).where(eq(users.email, validatedData.email));
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
 
-    const user = result.rows[0];
+    const user = result[0];
 
     // Verify password
     const isValidPassword = await verifyPassword(
       validatedData.password,
-      user.password_hash
+      user.passwordHash
     );
 
     if (!isValidPassword) {
@@ -45,7 +44,7 @@ export async function POST(request: NextRequest) {
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role || 'member',
       name: user.name,
     });
 
@@ -56,7 +55,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.role || 'member',
       },
     });
 

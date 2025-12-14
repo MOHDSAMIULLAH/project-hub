@@ -1,4 +1,4 @@
-const { Pool } = require('@neondatabase/serverless');
+const { neon } = require('@neondatabase/serverless');
 const fs = require('fs');
 const path = require('path');
 
@@ -11,15 +11,15 @@ async function initDatabase() {
     process.exit(1);
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const sql = neon(process.env.DATABASE_URL);
 
   try {
     console.log('🔄 Connecting to database...');
     
     // Test connection
-    const testResult = await pool.query('SELECT NOW()');
+    const testResult = await sql`SELECT NOW()`;
     console.log('✅ Database connected successfully');
-    console.log('📅 Server time:', testResult.rows[0].now);
+    console.log('📅 Server time:', testResult[0].now);
 
     // Read schema file
     const schemaPath = path.join(__dirname, '..', 'schema.sql');
@@ -27,14 +27,15 @@ async function initDatabase() {
 
     console.log('\n🔄 Executing schema...');
     
-    // Execute schema
-    await pool.query(schema);
+    // Execute schema (split by semicolon and execute each statement)
+    const statements = schema.split(';').filter(s => s.trim());
+    for (const statement of statements) {
+      if (statement.trim()) {
+        await sql(statement);
+      }
+    }
     
     console.log('✅ Database schema created successfully!');
-    console.log('\n📊 Tables created:');
-    console.log('  - users');
-    console.log('  - projects');
-    console.log('  - tasks');
     
   } catch (error) {
     console.error('❌ Error:', error.message);
@@ -45,8 +46,6 @@ async function initDatabase() {
       console.error('Detail:', error.detail);
     }
     process.exit(1);
-  } finally {
-    await pool.end();
   }
 }
 

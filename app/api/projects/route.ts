@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { query } from '@/lib/db';
+import { db } from '@/lib/db';
+import { projects, users } from '@/lib/schema';
+import { eq, desc } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
 
 const projectSchema = z.object({
@@ -16,16 +18,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const result = await query(
-      `SELECT p.*, u.name as creator_name 
-       FROM projects p 
-       JOIN users u ON p.created_by = u.id 
-       WHERE p.created_by = $1 
-       ORDER BY p.created_at DESC`,
-      [user.userId]
-    );
+    const result = await db
+      .select({
+        id: projects.id,
+        title: projects.title,
+        description: projects.description,
+        created_by: projects.createdBy,
+        created_at: projects.createdAt,
+        updated_at: projects.updatedAt,
+        creator_name: users.name,
+      })
+      .from(projects)
+      .innerJoin(users, eq(projects.createdBy, users.id))
+      .where(eq(projects.createdBy, user.userId))
+      .orderBy(desc(projects.createdAt));
 
-    return NextResponse.json({ projects: result.rows });
+    return NextResponse.json({ projects: result });
   } catch (error) {
     console.error('Get projects error:', error);
     return NextResponse.json(
@@ -46,14 +54,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = projectSchema.parse(body);
 
-    const result = await query(
-      `INSERT INTO projects (title, description, created_by) 
-       VALUES ($1, $2, $3) 
-       RETURNING *`,
-      [validatedData.title, validatedData.description, user.userId]
-    );
+    const result = await db.insert(projects).values({
+      title: validatedData.title,
+      description: validatedData.description,
+      createdBy: user.userId,
+    }).returning();
 
-    return NextResponse.json({ project: result.rows[0] }, { status: 201 });
+    return NextResponse.json({ project: result[0] }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

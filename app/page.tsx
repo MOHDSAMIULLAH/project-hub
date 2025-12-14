@@ -1,12 +1,20 @@
 import Link from 'next/link';
+import { getAuthUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-export default function Home() {
+export default async function Home() {
+  const user = await getAuthUser();
+  
+  if (user) {
+    redirect('/dashboard');
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="max-w-7xl mx-auto px-4 py-16">
         <div className="text-center">
           <h1 className="text-6xl font-bold text-gray-900 mb-6">
-            Project Hub
+            Project Management
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             AI-powered project management platform that helps you plan, track, 
